@@ -1,0 +1,21 @@
+# Dune
+_build
+.merlin
+*.install
+
+# opam
+_opam
+
+# npm
+node_modules
+
+# esy
+_esy/
+esy.lock
+
+# Editors
+.vscode/
+*.swp
+
+.env
+.DS_Store
