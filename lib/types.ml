@@ -90,6 +90,14 @@ module Field = struct
 
   let day_of_week = Option.get <.> day_of_week_optional
   let make_step_field elem n = if n > 0 then Some (Step (elem, n)) else None
+
+  let is_star = function
+    | Field Element.Star -> true
+    | List xs -> List.exists (Element.equal Element.Star) xs
+    | Step (Element.Star, step) -> step = 1
+    | _ -> false
+
+  let restricted = not <.> is_star
 end
 
 type t = {
