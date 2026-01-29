@@ -13,17 +13,18 @@ module Utils = struct
     aux (ls, [])
 
   let option_apply fa fm =
-    match (fa, fm) with Some f, Some b -> Some (f b) | _, _ -> None
+    match fa, fm with Some f, Some b -> Some (f b) | _, _ -> None
 
   let lift_option2 f fa fb = option_apply (Option.map f fa) fb
 
   let traverse_option f xs =
     List.fold_right
       (fun x ys -> lift_option2 List.cons (f x) ys)
-      xs (Option.some [])
+      xs
+      (Option.some [])
 
-  (* let lift_list2 f xs ys =
-     List.concat_map (fun x -> List.concat_map (fun y -> [ f x y ]) ys) xs *)
+  (* let lift_list2 f xs ys = List.concat_map (fun x -> List.concat_map (fun y
+     -> [ f x y ]) ys) xs *)
 
   let minimum cmp xs =
     let min acc x =
@@ -34,13 +35,13 @@ module Utils = struct
     List.fold_left min None xs
 end
 
-type expanded = {
-  min : field;
-  hour : field;
-  dom : field;
-  month : field;
-  dow : field;
-}
+type expanded =
+  { min : field
+  ; hour : field
+  ; dom : field
+  ; month : field
+  ; dow : field
+  }
 
 and field = int list
 
@@ -52,8 +53,10 @@ let ( <.> ) f g x = f (g x)
 
 let fill_to (start, finish) step =
   let nums = Seq.unfold (fun x -> Option.some (start + (step * x), x + 1)) 0 in
-  if step <= 0 then []
-  else if finish < start then []
+  if step <= 0
+  then []
+  else if finish < start
+  then []
   else List.of_seq @@ Seq.take_while (( >= ) finish) nums
 
 let expand_element (lo, hi) element =
@@ -68,8 +71,8 @@ let rec expand_element_stepped range element step =
   match element with
   | Star -> Utils.non_empty @@ fill_to range step
   | Range (a, b) ->
-      let finish = min b (snd range) in
-      Utils.non_empty @@ fill_to (a, finish) step
+    let finish = min b (snd range) in
+    Utils.non_empty @@ fill_to (a, finish) step
   | Specified x -> expand_element_stepped (x, snd range) Star step
 
 let expand_field range field =
@@ -77,18 +80,17 @@ let expand_field range field =
   match field with
   | Field elem -> expand_element range elem
   | List xs ->
-      Option.map
-        (Utils.nub Int.equal <.> List.concat)
-        (Utils.traverse_option (expand_element range) xs)
+    Option.map
+      (Utils.nub Int.equal <.> List.concat)
+      (Utils.traverse_option (expand_element range) xs)
   | Step (elem, step) -> expand_element_stepped range elem step
 
-(* let tod_ptime_span hour minute =
-   Ptime.Span.of_int_s @@ ((hour * 60 * 60) + (minute * 60)) *)
+(* let tod_ptime_span hour minute = Ptime.Span.of_int_s @@ ((hour * 60 * 60) +
+   (minute * 60)) *)
 
-(* let valid_tods hrs mns =
-   let minutes = List.sort Int.compare mns in
-   let hours = List.sort Int.compare hrs in
-   Utils.lift_list2 tod_ptime_span hours minutes *)
+(* let valid_tods hrs mns = let minutes = List.sort Int.compare mns in let hours
+   = List.sort Int.compare hrs in Utils.lift_list2 tod_ptime_span hours
+   minutes *)
 
 let has_valid_for_month day days =
   let minimum xs =
@@ -128,7 +130,7 @@ let expand (cron : Types.t) =
   in
   let ( <$> ) = Option.map in
   let ( <*> ) fa fm =
-    match (fa, fm) with Some f, Some m -> Some (f m) | _, _ -> None
+    match fa, fm with Some f, Some m -> Some (f m) | _, _ -> None
   in
   let create_expanded min hour dom month dow = { min; hour; dom; month; dow } in
   let expanded =
@@ -146,18 +148,16 @@ let matches cron ptime =
   match expand cron with
   | None -> false
   | Some expanded ->
-      let open Types in
-      let check_dom_and_dow =
-        if
-          Field.restricted cron.day_of_month
-          && Field.restricted cron.day_of_week
-        then elem dom expanded.dom || elem week_day expanded.dow
-        else elem dom expanded.dom && elem week_day expanded.dow
-      in
-      List.for_all Fun.id
-        [
-          elem mn expanded.min;
-          elem hr expanded.hour;
-          elem mth expanded.month;
-          check_dom_and_dow;
-        ]
+    let open Types in
+    let check_dom_and_dow =
+      if Field.restricted cron.day_of_month && Field.restricted cron.day_of_week
+      then elem dom expanded.dom || elem week_day expanded.dow
+      else elem dom expanded.dom && elem week_day expanded.dow
+    in
+    List.for_all
+      Fun.id
+      [ elem mn expanded.min
+      ; elem hr expanded.hour
+      ; elem mth expanded.month
+      ; check_dom_and_dow
+      ]

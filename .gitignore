@@ -19,3 +19,7 @@ esy.lock
 
 .env
 .DS_Store
+
+result*
+.direnv
+.envrc.local

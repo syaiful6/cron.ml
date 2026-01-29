@@ -11,31 +11,37 @@ let const_str_p i str = Fun.const i <$> string str
 
 let parse_day =
   choice
-  @@ List.map2 const_str_p (1 -- 7)
+  @@ List.map2
+       const_str_p
+       (1 -- 7)
        [ "mon"; "tue"; "wed"; "thu"; "fri"; "sat"; "sun" ]
 
 let parse_month =
   choice
-  @@ List.map2 const_str_p (1 -- 12)
-       [
-         "jan";
-         "feb";
-         "mar";
-         "apr";
-         "may";
-         "jun";
-         "jul";
-         "aug";
-         "sep";
-         "oct";
-         "nov";
-         "dec";
+  @@ List.map2
+       const_str_p
+       (1 -- 12)
+       [ "jan"
+       ; "feb"
+       ; "mar"
+       ; "apr"
+       ; "may"
+       ; "jun"
+       ; "jul"
+       ; "aug"
+       ; "sep"
+       ; "oct"
+       ; "nov"
+       ; "dec"
        ]
 
 let parse_int =
   take_while1 (function '0' .. '9' -> true | _ -> false) >>| int_of_string
 
-type str_support = MonthlyString | DayString | NoString
+type str_support =
+  | MonthlyString
+  | DayString
+  | NoString
 
 let support_parser = function
   | MonthlyString -> choice [ parse_month; parse_int ]
@@ -50,7 +56,8 @@ let range_element_p ss =
   *> ( support_parser ss >>= fun ends ->
        m_parse
          (Element.create_range start)
-         "start of range must be less than or equal to end" ends )
+         "start of range must be less than or equal to end"
+         ends )
 
 let specified_element_p ss =
   support_parser ss
@@ -101,8 +108,12 @@ let classic_p =
     { minute; hour; day_of_month; month; day_of_week }
   in
   let space = char ' ' in
-  mk_schedule <$> (minutes_p <* space) <*> (hours_p <* space)
-  <*> (day_of_month_p <* space) <*> (month_p <* space) <*> day_of_week_p
+  mk_schedule
+  <$> (minutes_p <* space)
+  <*> (hours_p <* space)
+  <*> (day_of_month_p <* space)
+  <*> (month_p <* space)
+  <*> day_of_week_p
 
 let cron_schedule_loose =
   yearly_p <|> monthly_p <|> weekly_p <|> daily_p <|> hourly_p <|> classic_p
