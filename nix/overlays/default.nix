@@ -1,8 +1,8 @@
 final: prev:
 let
   ocamlOverlay = final': prev': {
-    cron = final'.callPackage ../packages/cron.nix {
-      inherit (final.cron) doCheck;
+    croni = final'.callPackage ../packages/croni.nix {
+      inherit (final.croni) doCheck;
     };
   };
 in
@@ -13,7 +13,7 @@ in
   ocaml-ng.ocamlPackages_5_4 = prev.ocaml-ng.ocamlPackages_5_4.overrideScope ocamlOverlay;
   ocaml-ng.ocamlPackages = prev.ocaml-ng.ocamlPackages.overrideScope ocamlOverlay;
 
-  cron = final.lib.makeScope final.newScope (self: {
+  croni = final.lib.makeScope final.newScope (self: {
     doCheck = true;
   });
 }

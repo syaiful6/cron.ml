@@ -1,4 +1,4 @@
 (library
- (name cron)
- (public_name cron)
+ (name croni)
+ (public_name croni)
  (libraries ptime angstrom))

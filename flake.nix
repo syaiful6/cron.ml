@@ -1,5 +1,5 @@
 {
-  description = "Cron - Nix Flake Template";
+  description = "Croni - Nix Flake Template";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-25.11";
@@ -39,9 +39,9 @@
       packages = withPkgs (
         { pkgs, system }:
         {
-          default = self.packages.${system}.cron;
+          default = self.packages.${system}.croni;
           inherit (pkgs.ocamlPackages)
-            cron
+            croni
             ;
         }
       );
@@ -49,18 +49,18 @@
       devShells = withPkgs (
         { pkgs, ... }:
         {
-          default = pkgs.cron.dev-shell;
+          default = pkgs.croni.dev-shell;
         }
       );
 
       overlays.default = import ./nix/overlays;
 
-      formatter = withPkgs ({ pkgs, ... }: pkgs.cron.treefmt);
+      formatter = withPkgs ({ pkgs, ... }: pkgs.croni.treefmt);
 
       checks = withPkgs (
         { pkgs, ... }:
         {
-          formatting = pkgs.cron.checks.formatting;
+          formatting = pkgs.croni.checks.formatting;
         }
       );
     };

@@ -11,7 +11,7 @@ let
   };
 in
 {
-  cron = prev.cron.overrideScope (
+  croni = prev.croni.overrideScope (
     final': prev': {
       checks.formatting = treefmtEval.config.build.check (final.lib.cleanSource ../../.);
       treefmt = treefmtEval.config.build.wrapper;

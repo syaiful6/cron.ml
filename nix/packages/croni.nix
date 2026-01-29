@@ -8,7 +8,7 @@
 }:
 
 buildDunePackage {
-  pname = "cron";
+  pname = "croni";
   version = "0.1.0";
 
   src =
@@ -20,7 +20,7 @@ buildDunePackage {
       fileset = fs.unions [
         ../../lib
         ../../dune-project
-        ../../cron.opam
+        ../../croni.opam
       ];
     };
 

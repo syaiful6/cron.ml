@@ -21,7 +21,7 @@ let
       (import ./nix/overlays)
       (_final: prev: {
         treefmt-nix = import treefmtSrc;
-        cron = prev.cron.overrideScope (
+        croni = prev.croni.overrideScope (
           _final': _prev': {
             inherit doCheck;
           }
@@ -39,7 +39,7 @@ let
     "ocamlPackages_5_2"
   ];
   packageNames = [
-    "cron"
+    "croni"
   ];
   outputs = pkgs.lib.genAttrs ocamlPackageSets (
     ocamlPackages: pkgs.lib.genAttrs packageNames (package: pkgs.ocaml-ng.${ocamlPackages}.${package})
@@ -50,8 +50,8 @@ outputs
   inherit (pkgs.ocamlPackages)
     cron
     ;
-  inherit (pkgs.cron)
+  inherit (pkgs.croni)
     dev-shell
     ;
-  checks.formatting = pkgs.cron.checks.formatting;
+  checks.formatting = pkgs.croni.checks.formatting;
 }

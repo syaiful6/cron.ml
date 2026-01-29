@@ -4,7 +4,7 @@
   ocamlPackages,
 }:
 mkShell {
-  inputsFrom = [ ocamlPackages.cron ];
+  inputsFrom = [ ocamlPackages.croni ];
   buildInputs =
     (with ocamlPackages; [
       ocaml-lsp
