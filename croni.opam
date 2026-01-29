@@ -5,9 +5,9 @@ description: "Cron data structure and parser."
 maintainer: ["syai.bahri6@gmail.com"]
 authors: ["Syaiful Bahri"]
 license: "MIT"
-homepage: "https://github.com/syaiful6/cron.ml"
+homepage: "https://github.com/syaiful6/croni"
 doc: "https://url/to/documentation"
-bug-reports: "https://github.com/syaiful6/cron.ml/issues"
+bug-reports: "https://github.com/syaiful6/croni/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.16"}
@@ -30,4 +30,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/syaiful6/cron.ml.git"
+dev-repo: "git+https://github.com/syaiful6/croni.git"

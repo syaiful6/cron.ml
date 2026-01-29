@@ -1,11 +1,11 @@
 (lang dune 3.16)
 
-(name cron)
+(name croni)
 
 (generate_opam_files true)
 
 (source
- (github syaiful6/cron.ml))
+ (github syaiful6/croni))
 
 (authors "Syaiful Bahri")
 
@@ -16,7 +16,7 @@
 (documentation https://url/to/documentation)
 
 (package
- (name cron)
+ (name croni)
  (synopsis "Cron data structure and parser")
  (description "Cron data structure and parser.")
  (depends
