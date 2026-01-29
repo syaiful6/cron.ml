@@ -1,5 +1,8 @@
 module Element : sig
-  type t = Star | Specified of int | Range of int * int
+  type t =
+    | Star
+    | Specified of int
+    | Range of int * int
 
   val equal : t -> t -> bool
   val to_string : t -> string
@@ -20,13 +23,13 @@ module Field : sig
   val restricted : t -> bool
 end
 
-type t = {
-  minute : Field.t;
-  hour : Field.t;
-  day_of_month : Field.t;
-  month : Field.t;
-  day_of_week : Field.t;
-}
+type t =
+  { minute : Field.t
+  ; hour : Field.t
+  ; day_of_month : Field.t
+  ; month : Field.t
+  ; day_of_week : Field.t
+  }
 
 val equal : t -> t -> bool
 (** equal x y is true if and only x = y *)
