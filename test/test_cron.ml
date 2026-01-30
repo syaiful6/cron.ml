@@ -229,6 +229,132 @@ let test_schedule_not_matches_starred_stepped_field () =
   in
   Alcotest.(check bool) "cron expected not matches" false matches
 
+let ptime = Alcotest.testable (Ptime.pp_human ()) Ptime.equal
+
+let test_next_every_minute () =
+  (* at every minute *)
+  let start = from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:25 in
+  let expected =
+    from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:26
+  in
+  let result = Croni.Schedule.next Croni.every_minute start in
+  Alcotest.(check (option ptime)) "next minute" (Some expected) result
+
+let test_next_not_inclusive () =
+  (* schedule matches at minute 30, starting at minute 30 should return next
+     hour's 30 *)
+  let schedule =
+    Croni.{ every_minute with minute = Field.Field (Element.Specified 30) }
+  in
+  let start = from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:30 in
+  let expected =
+    from_datetime ~year:2024 ~month:5 ~day:24 ~hour:11 ~minute:30
+  in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime)) "not inclusive" (Some expected) result
+
+let test_next_same_hour () =
+  (* at minute 30, starting at minute 25 *)
+  let schedule =
+    Croni.{ every_minute with minute = Field.Field (Element.Specified 30) }
+  in
+  let start = from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:25 in
+  let expected =
+    from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:30
+  in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime)) "same hour" (Some expected) result
+
+let test_next_hour_rollover () =
+  (* at minute 15, starting at minute 45 should go to next hour *)
+  let schedule =
+    Croni.{ every_minute with minute = Field.Field (Element.Specified 15) }
+  in
+  let start = from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:45 in
+  let expected =
+    from_datetime ~year:2024 ~month:5 ~day:24 ~hour:11 ~minute:15
+  in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime)) "hour rollover" (Some expected) result
+
+let test_next_day_rollover () =
+  (* at 00:00, starting at 23:30 should go to next day *)
+  let schedule = Croni.daily in
+  let start = from_datetime ~year:2024 ~month:5 ~day:24 ~hour:23 ~minute:30 in
+  let expected = from_datetime ~year:2024 ~month:5 ~day:25 ~hour:0 ~minute:0 in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime)) "day rollover" (Some expected) result
+
+let test_next_month_rollover () =
+  (* at 00:00 on day 1, starting at end of month *)
+  let schedule = Croni.monthly in
+  let start = from_datetime ~year:2024 ~month:5 ~day:31 ~hour:23 ~minute:30 in
+  let expected = from_datetime ~year:2024 ~month:6 ~day:1 ~hour:0 ~minute:0 in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime)) "month rollover" (Some expected) result
+
+let test_next_year_rollover () =
+  (* at Jan 1 00:00, starting at end of year *)
+  let schedule = Croni.yearly in
+  let start = from_datetime ~year:2024 ~month:12 ~day:31 ~hour:23 ~minute:30 in
+  let expected = from_datetime ~year:2025 ~month:1 ~day:1 ~hour:0 ~minute:0 in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime)) "year rollover" (Some expected) result
+
+let test_next_step_field () =
+  (* at every 15th minute *)
+  let schedule =
+    Croni.{ every_minute with minute = Field.Step (Element.Star, 15) }
+  in
+  let start = from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:25 in
+  let expected =
+    from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:30
+  in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime)) "step field" (Some expected) result
+
+let test_next_specific_day_of_week () =
+  (* every Sunday at 00:00 - 2024-05-24 is a Friday, next Sunday is
+     2024-05-26 *)
+  let schedule = Croni.weekly in
+  let start = from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:25 in
+  let expected = from_datetime ~year:2024 ~month:5 ~day:26 ~hour:0 ~minute:0 in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime)) "specific day of week" (Some expected) result
+
+let test_next_leap_year () =
+  (* at Feb 29 00:00 in a leap year *)
+  let schedule =
+    Croni.
+      { daily with
+        month = Field.Field (Element.Specified 2)
+      ; day_of_month = Field.Field (Element.Specified 29)
+      }
+  in
+  let start = from_datetime ~year:2024 ~month:2 ~day:28 ~hour:10 ~minute:0 in
+  let expected = from_datetime ~year:2024 ~month:2 ~day:29 ~hour:0 ~minute:0 in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime)) "leap year feb 29" (Some expected) result
+
+let test_next_dom_and_dow_restricted () =
+  (* at 00:00 on day 15 and on Monday (OR logic) 2024-05-24 is Friday, next is
+     either Monday 2024-05-27 or day 15 (June 15) Monday 2024-05-27 comes
+     first *)
+  let schedule =
+    Croni.
+      { daily with
+        day_of_month = Field.Field (Element.Specified 15)
+      ; day_of_week = Field.Field (Element.Specified 1) (* Monday *)
+      }
+  in
+  let start = from_datetime ~year:2024 ~month:5 ~day:24 ~hour:10 ~minute:0 in
+  let expected = from_datetime ~year:2024 ~month:5 ~day:27 ~hour:0 ~minute:0 in
+  let result = Croni.Schedule.next schedule start in
+  Alcotest.(check (option ptime))
+    "dom and dow restricted"
+    (Some expected)
+    result
+
 let () =
   Alcotest.run
     "Cron"
@@ -314,5 +440,24 @@ let () =
             "does not match fields that miss starred stepped fields"
             `Quick
             test_schedule_not_matches_starred_stepped_field
+        ] )
+    ; ( "schedule next"
+      , [ Alcotest.test_case "next every minute" `Quick test_next_every_minute
+        ; Alcotest.test_case "not inclusive" `Quick test_next_not_inclusive
+        ; Alcotest.test_case "same hour" `Quick test_next_same_hour
+        ; Alcotest.test_case "hour rollover" `Quick test_next_hour_rollover
+        ; Alcotest.test_case "day rollover" `Quick test_next_day_rollover
+        ; Alcotest.test_case "month rollover" `Quick test_next_month_rollover
+        ; Alcotest.test_case "year rollover" `Quick test_next_year_rollover
+        ; Alcotest.test_case "step field" `Quick test_next_step_field
+        ; Alcotest.test_case
+            "specific day of week"
+            `Quick
+            test_next_specific_day_of_week
+        ; Alcotest.test_case "leap year" `Quick test_next_leap_year
+        ; Alcotest.test_case
+            "dom and dow restricted"
+            `Quick
+            test_next_dom_and_dow_restricted
         ] )
     ]
