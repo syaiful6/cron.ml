@@ -23,9 +23,6 @@ module Utils = struct
       xs
       (Option.some [])
 
-  (* let lift_list2 f xs ys = List.concat_map (fun x -> List.concat_map (fun y
-     -> [ f x y ]) ys) xs *)
-
   let minimum cmp xs =
     let min acc x =
       match acc with
@@ -84,13 +81,6 @@ let expand_field range field =
       (Utils.nub Int.equal <.> List.concat)
       (Utils.traverse_option (expand_element range) xs)
   | Step (elem, step) -> expand_element_stepped range elem step
-
-(* let tod_ptime_span hour minute = Ptime.Span.of_int_s @@ ((hour * 60 * 60) +
-   (minute * 60)) *)
-
-(* let valid_tods hrs mns = let minutes = List.sort Int.compare mns in let hours
-   = List.sort Int.compare hrs in Utils.lift_list2 tod_ptime_span hours
-   minutes *)
 
 let has_valid_for_month day days =
   let minimum xs =
@@ -161,3 +151,121 @@ let matches cron ptime =
       ; elem mth expanded.month
       ; check_dom_and_dow
       ]
+
+let is_leap_year year =
+  (year mod 4 = 0 && year mod 100 <> 0) || year mod 400 = 0
+
+let days_in_month year month =
+  match month with
+  | 1 -> 31
+  | 2 -> if is_leap_year year then 29 else 28
+  | 3 -> 31
+  | 4 -> 30
+  | 5 -> 31
+  | 6 -> 30
+  | 7 -> 31
+  | 8 -> 31
+  | 9 -> 30
+  | 10 -> 31
+  | 11 -> 30
+  | 12 -> 31
+  | _ -> 0
+
+let ptime_min a b = if Ptime.compare a b <= 0 then a else b
+
+let next_match expanded time =
+  let (start_year, start_month, start_day), ((start_hour, start_minute, _), _) =
+    Ptime.to_date_time time
+  in
+  let find_ge x lst =
+    let sorted = List.sort Int.compare lst in
+    List.find_opt (fun v -> v >= x) sorted
+  in
+  let rec search_year year =
+    if year > start_year + 5
+    then None
+    else
+      let first_month = if year = start_year then start_month else 1 in
+      match search_month year first_month with
+      | Some _ as result -> result
+      | None -> search_year (year + 1)
+  and search_month year month =
+    match find_ge month expanded.month with
+    | None -> None
+    | Some m ->
+      let first_day =
+        if year = start_year && m = start_month then start_day else 1
+      in
+      (match search_day year m first_day with
+      | Some _ as result -> result
+      | None -> search_month year (m + 1))
+  and search_day year month day =
+    let max_day = days_in_month year month in
+    if day > max_day || day > 31
+    then None
+    else
+      match Ptime.of_date_time ((year, month, day), ((0, 0, 0), 0)) with
+      | None -> search_day year month (day + 1)
+      | Some ptime ->
+        let dow = Ptime.weekday_num ptime in
+        let dom_valid = List.exists (Int.equal day) expanded.dom in
+        let dow_valid = List.exists (Int.equal dow) expanded.dow in
+        if dom_valid && dow_valid
+        then
+          let first_hour =
+            if year = start_year && month = start_month && day = start_day
+            then start_hour
+            else 0
+          in
+          match search_hour year month day first_hour with
+          | Some _ as result -> result
+          | None -> search_day year month (day + 1)
+        else search_day year month (day + 1)
+  and search_hour year month day hour =
+    match find_ge hour expanded.hour with
+    | None -> None
+    | Some h ->
+      let first_minute =
+        if
+          year = start_year
+          && month = start_month
+          && day = start_day
+          && h = start_hour
+        then start_minute
+        else 0
+      in
+      (match search_minute year month day h first_minute with
+      | Some _ as result -> result
+      | None -> search_hour year month day (h + 1))
+  and search_minute year month day hour minute =
+    match find_ge minute expanded.min with
+    | None -> None
+    | Some m -> Ptime.of_date_time ((year, month, day), ((hour, m, 0), 0))
+  in
+  search_year start_year
+
+let star_field = Types.Field.Field Types.Element.Star
+
+let next (cron : Types.t) start =
+  let dom_restricted = Types.Field.restricted cron.day_of_month in
+  let dow_restricted = Types.Field.restricted cron.day_of_week in
+  match Ptime.add_span start (Ptime.Span.of_int_s 60) with
+  | None -> None
+  | Some time ->
+    if dom_restricted && dow_restricted
+    then
+      (* Trick from Python's croniter: run with DOM=* and DOW=*, take earlier *)
+      let dom_star_result =
+        let cron' = { cron with day_of_month = star_field } in
+        Option.bind (expand cron') (fun exp -> next_match exp time)
+      in
+      let dow_star_result =
+        let cron' = { cron with day_of_week = star_field } in
+        Option.bind (expand cron') (fun exp -> next_match exp time)
+      in
+      match dom_star_result, dow_star_result with
+      | Some a, Some b -> Some (ptime_min a b)
+      | Some a, None -> Some a
+      | None, Some b -> Some b
+      | None, None -> None
+    else Option.bind (expand cron) (fun exp -> next_match exp time)
